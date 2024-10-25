@@ -21,7 +21,7 @@ def copy_app_template(temp_dir: Path) -> Path:
     :return: The path to the app template.
     """
     logger.info(f"Copying app template")
-    app_temp_path = Path.cwd() / "data" / "app-template"
+    app_temp_path = Path(__file__).parent.parent / "data" / "app-template"
     app_path = temp_dir / "app"
     copytree(app_temp_path, app_path)
     return app_path
