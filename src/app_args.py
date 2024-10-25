@@ -1,5 +1,6 @@
 import logging
 from argparse import ArgumentParser
+from pathlib import Path
 
 from utils.logger import create_logger
 
@@ -25,6 +26,14 @@ def add_app_args(parser: ArgumentParser):
                         help="The description of the game. For example, \"Enjoy the "
                              "high-speed thrills of car racing in MakeCode Arcade! For "
                              "the MakeCode Arcade Mini Game Jam #3.\".")
+    parser.add_argument("--icon", "-i", type=Path,
+                        help="The path to the icon file to use for the Electron app. "
+                             "This needs to be an image that is supported by "
+                             "ImageMagick. For example, \"icon.png\". If you want to "
+                             "convert your MakeCode Arcade images to an actual image, "
+                             "follow the instructions in the README.")
+    parser.add_argument("--prep-only", action="store_true", default=False,
+                        help="Only prepare the app, do not build it.")
     parser.add_argument("--debug", action="store_const",
                         const=logging.DEBUG, default=logging.INFO,
                         help="Include debug messages. Defaults to info and "

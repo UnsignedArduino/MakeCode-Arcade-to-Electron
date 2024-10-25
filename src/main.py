@@ -51,7 +51,20 @@ with TemporaryDirectory(delete=False) as temp_dir:
         js_path = app_path / "src" / "fake-net" / end_part
         logger.info(f"Downloading {js_url} to {js_path}")
         download(js_url, js_path)
-    run_cmd("npm install", cwd=app_path)
-    run_cmd("npm run make", cwd=app_path)
+    if args.icon:
+        logger.info(f"Converting icon {args.icon} to .ico, .png, and .icns")
+        src_icon_path = Path(args.icon).expanduser().resolve().absolute()
+        dest_ico_path = (app_path / "src" / "icon.ico").resolve().absolute()
+        dest_png_path = (app_path / "src" / "icon.png").resolve().absolute()
+        dest_icns_path = (app_path / "src" / "icon.icns").resolve().absolute()
+        run_cmd(
+            f"magick convert {src_icon_path} -define icon:auto-resize=16,32,48,64,128,256 -compress zip {dest_ico_path}")
+        run_cmd(f"magick convert {src_icon_path} {dest_png_path}")
+        run_cmd(f"magick convert {src_icon_path} {dest_icns_path}")
 
-    logger.info(f"App built successfully at {app_path / 'out'}")
+    if args.prep_only:
+        logger.info(f"App prepared successfully at {app_path}")
+    else:
+        run_cmd("npm install", cwd=app_path)
+        run_cmd("npm run make", cwd=app_path)
+        logger.info(f"App built successfully at {app_path / 'out'}")
