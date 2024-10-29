@@ -1,9 +1,12 @@
 import logging
 import subprocess
+import sys
 import tempfile
 from argparse import ArgumentParser
 from pathlib import Path
 from tempfile import TemporaryDirectory
+
+from PIL import Image
 
 import app_builder
 from app_args import add_app_args
@@ -26,7 +29,7 @@ def run_cmd(cmd: str, cwd: Path = None):
     subprocess.run(cmd, shell=True, check=True, cwd=cwd)
 
 
-# TODO: Delete the temporary directory, don't override OS tempdir
+# TODO: Delete the temporary directory, don"t override OS tempdir
 tempfile.tempdir = Path.cwd()
 with TemporaryDirectory(delete=False) as temp_dir:
     temp_dir = Path(temp_dir.decode())
@@ -57,14 +60,18 @@ with TemporaryDirectory(delete=False) as temp_dir:
         dest_ico_path = (app_path / "src" / "icon.ico").resolve().absolute()
         dest_png_path = (app_path / "src" / "icon.png").resolve().absolute()
         dest_icns_path = (app_path / "src" / "icon.icns").resolve().absolute()
-        run_cmd(
-            f"magick convert {src_icon_path} -define icon:auto-resize=16,32,48,64,128,256 -compress zip {dest_ico_path}")
-        run_cmd(f"magick convert {src_icon_path} {dest_png_path}")
-        run_cmd(f"magick convert {src_icon_path} {dest_icns_path}")
+
+        with Image.open(src_icon_path) as img:
+            if sys.platform == "darwin":
+                img.save(dest_icns_path, format="ICNS")
+            elif sys.platform == "win32":
+                img.save(dest_ico_path, format="ICO")
+            else:
+                img.save(dest_png_path, format="PNG")
 
     if args.prep_only:
         logger.info(f"App prepared successfully at {app_path}")
     else:
         run_cmd("npm install", cwd=app_path)
         run_cmd("npm run make", cwd=app_path)
-        logger.info(f"App built successfully at {app_path / 'out'}")
+        logger.info(f"App built successfully at {app_path / "out"}")
