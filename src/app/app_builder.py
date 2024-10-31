@@ -29,7 +29,8 @@ def create_app(app_path: Path, name: str, description: str, version: str, author
     app_path.mkdir(parents=True, exist_ok=False)
 
     package_json_path = app_path / "package.json"
-    package_json = PACKAGE_JSON_CONTENTS.replace("<NAME>", name)
+    package_json = PACKAGE_JSON_CONTENTS.replace("<NAME>",
+                                                 name.lower().replace(" ", "-"))
     package_json = package_json.replace("<DESCRIPTION>", description)
     package_json = package_json.replace("<VERSION>", version)
     package_json = package_json.replace("<AUTHOR>", author)
