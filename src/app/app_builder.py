@@ -2,10 +2,11 @@ import json
 import logging
 import re
 from pathlib import Path
-from shutil import copyfile, copytree
+from shutil import copyfile
 
+from app.app_strings import FORGE_CONFIG_JS_CONTENTS, PACKAGE_JSON_CONTENTS, \
+    SRC___INDEX_HTML_CONTENTS, SRC___MAIN_JS_CONTENTS
 from bs4 import BeautifulSoup
-
 from utils.download import download
 from utils.extract import extract
 from utils.logger import create_logger
@@ -13,42 +14,43 @@ from utils.logger import create_logger
 logger = create_logger(name=__name__, level=logging.DEBUG)
 
 
-def copy_app_template(temp_dir: Path) -> Path:
+def create_app(app_path: Path, name: str, description: str, version: str, author: str):
     """
-    Copy the app template to the temporary directory.
+    Create the app.
 
-    :param temp_dir: The temporary directory to copy the app template to.
-    :return: The path to the app template.
+    :param app_path: Path to a directory where the app will be created. This path
+     should not exist.
+    :param name: The name of the app.
+    :param description: The description of the app.
+    :param version: The version of the app. Should not include the "v".
+    :param author: The author of the app.
     """
-    logger.info(f"Copying app template")
-    app_temp_path = Path(__file__).parent.parent / "data" / "app-template"
-    app_path = temp_dir / "app"
-    copytree(app_temp_path, app_path)
-    return app_path
+    logger.info("Creating app files")
+    app_path.mkdir(parents=True, exist_ok=False)
 
-
-def substitute_file_values(app_path: Path, args) -> None:
-    """
-    Substitute values in the package.json and index.html files.
-
-    :param app_path: The path to the app template.
-    :param args: The arguments to substitute.
-    """
     package_json_path = app_path / "package.json"
-    logger.info(f"Substituting values in {package_json_path}")
-    package_json = package_json_path.read_text()
-    package_json = package_json.replace("<NAME>", args.name)
-    package_json = package_json.replace("<DESCRIPTION>", args.description)
-    package_json = package_json.replace("<VERSION>", args.version)
-    package_json = package_json.replace("<AUTHOR>", args.author)
+    package_json = PACKAGE_JSON_CONTENTS.replace("<NAME>", name)
+    package_json = package_json.replace("<DESCRIPTION>", description)
+    package_json = package_json.replace("<VERSION>", version)
+    package_json = package_json.replace("<AUTHOR>", author)
     package_json_path.write_text(package_json)
 
-    index_html_path = app_path / "src" / "index.html"
-    logger.info(f"Substituting values in {index_html_path}")
-    index_html = index_html_path.read_text()
-    index_html = index_html.replace("<NAME>", args.name)
-    index_html = index_html.replace("<VERSION>", args.version)
+    forge_config_js_path = app_path / "forge.config.js"
+    forge_config_js_path.write_text(FORGE_CONFIG_JS_CONTENTS)
+
+    src_path = app_path / "src"
+    src_path.mkdir()
+
+    main_js_path = src_path / "main.js"
+    main_js_path.write_text(SRC___MAIN_JS_CONTENTS)
+
+    index_html_path = src_path / "index.html"
+    index_html = SRC___INDEX_HTML_CONTENTS.replace("<NAME>", name)
+    index_html = index_html.replace("<VERSION>", version)
     index_html_path.write_text(index_html)
+
+    fake_net_path = src_path / "fake-net"
+    fake_net_path.mkdir()
 
 
 def download_and_extract_game(temp_dir: Path, repo: str, version: str) -> Path:

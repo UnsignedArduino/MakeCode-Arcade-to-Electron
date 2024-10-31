@@ -8,8 +8,8 @@ from tempfile import TemporaryDirectory
 
 from PIL import Image
 
-import app_builder
-from app_args import add_app_args
+from app import app_builder
+from app.app_args import add_app_args
 from utils.download import download
 from utils.logger import create_logger, set_all_stdout_logger_levels
 
@@ -35,8 +35,10 @@ with TemporaryDirectory(delete=False) as temp_dir:
     temp_dir = Path(temp_dir.decode())
     logger.debug(f"Created temporary directory {temp_dir}")
 
-    app_path = app_builder.copy_app_template(temp_dir)
-    app_builder.substitute_file_values(app_path, args)
+    app_path = temp_dir / "app"
+    app_builder.create_app(app_path, args.name, args.description, args.version,
+                           args.author)
+
     repo_path = app_builder.download_and_extract_game(temp_dir, args.repo, args.version)
     new_bin_js_path = app_builder.copy_bin_js(repo_path, app_path)
     sim_url = app_builder.extract_sim_url(new_bin_js_path)
@@ -55,7 +57,6 @@ with TemporaryDirectory(delete=False) as temp_dir:
         logger.info(f"Downloading {js_url} to {js_path}")
         download(js_url, js_path)
     if args.icon:
-        logger.info(f"Converting icon {args.icon} to .ico, .png, and .icns")
         src_icon_path = Path(args.icon).expanduser().resolve().absolute()
         dest_ico_path = (app_path / "src" / "icon.ico").resolve().absolute()
         dest_png_path = (app_path / "src" / "icon.png").resolve().absolute()
@@ -63,10 +64,13 @@ with TemporaryDirectory(delete=False) as temp_dir:
 
         with Image.open(src_icon_path) as img:
             if sys.platform == "darwin":
+                logger.info("Converting icon to ICNS format")
                 img.save(dest_icns_path, format="ICNS")
             elif sys.platform == "win32":
+                logger.info("Converting icon to ICO format")
                 img.save(dest_ico_path, format="ICO")
             else:
+                logger.info("Converting icon to PNG format")
                 img.save(dest_png_path, format="PNG")
 
     if args.prep_only:

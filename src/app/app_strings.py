@@ -1,4 +1,127 @@
-<!--index.html-->
+PACKAGE_JSON_CONTENTS = r"""{
+  "name": "<NAME>",
+  "version": "<VERSION>",
+  "description": "<DESCRIPTION>",
+  "main": "src/main.js",
+  "author": "<AUTHOR>",
+  "devDependencies": {
+    "@electron-forge/cli": "^7.5.0",
+    "@electron-forge/maker-deb": "^7.5.0",
+    "@electron-forge/maker-rpm": "^7.5.0",
+    "@electron-forge/maker-squirrel": "^7.5.0",
+    "@electron-forge/maker-zip": "^7.5.0",
+    "@electron-forge/plugin-auto-unpack-natives": "^7.5.0",
+    "@electron-forge/plugin-fuses": "^7.5.0",
+    "@electron/fuses": "^1.8.0",
+    "electron": "^33.0.2",
+    "pxt": "^0.5.1"
+  },
+  "scripts": {
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
+  },
+  "dependencies": {
+    "electron-squirrel-startup": "^1.0.1"
+  }
+}
+"""
+FORGE_CONFIG_JS_CONTENTS = r"""const { FusesPlugin } = require("@electron-forge/plugin-fuses");
+const { FuseV1Options, FuseVersion } = require("@electron/fuses");
+
+module.exports = {
+  packagerConfig: {
+    icon: "src/icon",
+    asar: true,
+  },
+  rebuildConfig: {},
+  makers: [
+    {
+      name: "@electron-forge/maker-squirrel",
+      config: {},
+    },
+    {
+      name: "@electron-forge/maker-zip",
+      platforms: ["darwin"],
+    },
+    {
+      name: "@electron-forge/maker-deb",
+      config: {},
+    },
+    {
+      name: "@electron-forge/maker-rpm",
+      config: {},
+    },
+  ],
+  plugins: [
+    {
+      name: "@electron-forge/plugin-auto-unpack-natives",
+      config: {},
+    },
+    // Fuses are used to enable/disable various Electron functionality
+    // at package time, before code signing the application
+    new FusesPlugin({
+      version: FuseVersion.V1,
+      [FuseV1Options.RunAsNode]: false,
+      [FuseV1Options.EnableCookieEncryption]: true,
+      [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
+      [FuseV1Options.EnableNodeCliInspectArguments]: false,
+      [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
+      [FuseV1Options.OnlyLoadAppFromAsar]: true,
+    }),
+  ],
+};
+"""
+SRC___MAIN_JS_CONTENTS = r"""const { app, BrowserWindow, protocol, net } = require("electron")
+const path = require("node:path")
+const url = require("node:url")
+
+const createWindow = () => {
+  const windowScale = 4
+  const mainWindow = new BrowserWindow({
+    width: 160 * windowScale,
+    height: 127 * windowScale,
+    autoHideMenuBar: true,
+    icon: "src/icon.png"
+  })
+
+  mainWindow.loadFile("src/index.html")
+  // mainWindow.webContents.openDevTools();
+}
+
+app.whenReady().then(() => {
+  createWindow()
+
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow()
+  })
+
+  protocol.handle("https", (rq) => {
+    const u = new URL(rq.url)
+    const lastPart = u.pathname.split("/").reverse()[0]
+    const fileMapping = {
+      "---simulator": "./fake-net/---simulator.html",
+      "sim.css": "./fake-net/sim.css",
+      "icons.css": "./fake-net/icons.css",
+      "pxtsim.js": "./fake-net/pxtsim.js",
+      "sim.js": "./fake-net/sim.js",
+      "---simserviceworker": "./fake-net/---simserviceworker.js",
+    }
+    if (lastPart in fileMapping) {
+      const newURL = url.pathToFileURL(path.join(__dirname, fileMapping[lastPart]))
+      console.log(`Caught request to ${rq.url}, returning ${newURL}`)
+      return net.fetch(newURL.toString(), { bypassCustomProtocolHandlers: true })
+    } else {
+      return net.fetch(rq, { bypassCustomProtocolHandlers: true })
+    }
+  })
+})
+
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") app.quit()
+})
+"""
+SRC___INDEX_HTML_CONTENTS = r"""<!--index.html-->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -184,3 +307,4 @@
 </script>
 </body>
 </html>
+"""
